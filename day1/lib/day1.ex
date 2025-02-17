@@ -43,6 +43,12 @@ defmodule Day1 do
     abs(head1 - head2) + difference([tail1, tail2])
   end
 
+  def commonsetup do
+    {:ok, contents} = File.read("day1.txt")
+    contents |> String.split("\n", trim: true)
+                              |> Enum.reduce([], fn (item, output) -> parse(item, output) end)
+  end
+
   @doc """
   Solve for addition of all
 
@@ -52,9 +58,47 @@ defmodule Day1 do
   """
 
   def solve1 do
-    {:ok, contents} = File.read("day1.txt")
-    [list1, list2] = contents |> String.split("\n", trim: true)
-                              |> Enum.reduce([], fn (item, output) -> parse(item, output) end)
+    [list1, list2] = commonsetup()
     [Enum.sort(list1), Enum.sort(list2)] |> difference()
   end
+
+  @doc """
+  Count
+
+  ## Examples
+      iex> Day1.count(3, [4,3,5,3,9,3])
+      3
+
+      iex> Day1.count(4, [4,3,5,3,9,3])
+      1
+
+      iex> Day1.count(42, [4,3,5,3,9,3])
+      0
+  """
+
+  def count(find, list), do: Enum.count(list, &(&1 == find))
+
+  @doc """
+  Similarity the number multiplied by how many times
+
+  ## Examples
+      iex> Day1.similarity([[3,4,2,1,3,3], [4,3,5,3,9,3]])
+      31
+  """
+
+  def similarity([[lastitem], list]), do: lastitem * count(lastitem, list)
+  def similarity([[head | tail], list]), do:  head * count(head, list) + similarity([tail, list])
+
+  @doc """
+  Solve for simularity of all
+
+  ## Examples
+      iex> Day1.solve2()
+      :answer
+  """
+
+def solve2 do
+  commonsetup() |> similarity()
+end
+
 end
