@@ -44,15 +44,21 @@ defmodule Day4 do
     maps[newy][newx]
   end
 
+  def safeMapAccess([y,_x], [_yextents, _xextents], _maps) when y == -1, do: "."
+  def safeMapAccess([_y,x], [_yextents, _xextents], _maps) when x == -1, do: "."
+  def safeMapAccess([y,_x], [yextents, _xextents], _maps) when y > yextents, do: "."
+  def safeMapAccess([_y,x], [_yextents, xextents], _maps) when x > xextents, do: "."
+  def safeMapAccess([y,x], [_yextents, _xextents], maps), do: maps[y][x]
+
 #XMAS
 
 # Scan through grid
-def scan(maps , [yextents, xextents], [y,x], count) when x+1 <=xextents,                     do: findx(maps, [yextents, xextents], [y,x+1], count, maps[y][x+1])
-def scan(maps , [yextents, xextents], [y,x], count) when x+1 > xextents and y+1 <= yextents, do: findx(maps, [yextents, xextents], [y+1,0], count, maps[y+1][0])
-def scan(_maps, [yextents, xextents], [y,x], count) when x+1 > xextents and y+1 > yextents,  do: count
+def scan(letter, maps , [yextents, xextents], [y,x], count) when x+1 <=xextents,                     do: findLetter(letter, maps, [yextents, xextents], [y,x+1], count, maps[y][x+1])
+def scan(letter, maps , [yextents, xextents], [y,x], count) when x+1 > xextents and y+1 <= yextents, do: findLetter(letter, maps, [yextents, xextents], [y+1,0], count, maps[y+1][0])
+def scan(_letter, _maps, [yextents, xextents], [y,x], count) when x+1 > xextents and y+1 > yextents,  do: count
 
 # Found first letter
-def findx(maps, [yextents, xextents], [y,x], count, characterAtPosition) when characterAtPosition == "X"  do
+def findLetter(letter, maps, [yextents, xextents], [y,x], count, characterAtPosition) when letter == "X" and characterAtPosition == "X"  do
   count_up    = find(maps, "M", [yextents, xextents], coordinatesForDirection([y,x],:umatch),  :umatch ,       count, indexMapAtPosition([y,x],:umatch,maps))
   count_down  = find(maps, "M", [yextents, xextents], coordinatesForDirection([y,x],:dmatch),  :dmatch ,    count_up, indexMapAtPosition([y,x],:dmatch,maps))
   count_left  = find(maps, "M", [yextents, xextents], coordinatesForDirection([y,x],:lmatch),  :lmatch ,  count_down, indexMapAtPosition([y,x],:lmatch,maps))
@@ -61,9 +67,19 @@ def findx(maps, [yextents, xextents], [y,x], count, characterAtPosition) when ch
   count_ur    = find(maps, "M", [yextents, xextents], coordinatesForDirection([y,x],:urmatch), :urmatch,    count_ul, indexMapAtPosition([y,x],:urmatch,maps))
   count_dl    = find(maps, "M", [yextents, xextents], coordinatesForDirection([y,x],:dlmatch), :dlmatch,    count_ur, indexMapAtPosition([y,x],:dlmatch,maps))
   count_dr    = find(maps, "M", [yextents, xextents], coordinatesForDirection([y,x],:drmatch), :drmatch,    count_dl, indexMapAtPosition([y,x],:drmatch,maps))
-  scan(maps, [yextents, xextents], [y,x], count_dr)
+  scan(letter, maps, [yextents, xextents], [y,x], count_dr)
 end
-def findx(maps, [yextents, xextents], [y,x], count, _), do: scan(maps, [yextents, xextents], [y,x], count)
+def findLetter(letter, maps, [yextents, xextents], [y,x], count, characterAtPosition) when letter == "A" and characterAtPosition == "A" do
+  case [safeMapAccess([y-1,x-1],[yextents, xextents], maps), safeMapAccess([y+1,x+1],[yextents, xextents], maps), safeMapAccess([y-1,x+1],[yextents, xextents], maps), safeMapAccess([y+1,x-1],[yextents, xextents], maps)] do
+    ["M","S","M","S"] -> scan(letter, maps, [yextents, xextents], [y,x], count+1)
+    ["M","S","S","M"] -> scan(letter, maps, [yextents, xextents], [y,x], count+1)
+    ["S","M","M","S"] -> scan(letter, maps, [yextents, xextents], [y,x], count+1)
+    ["S","M","S","M"] -> scan(letter, maps, [yextents, xextents], [y,x], count+1)
+    _                 -> scan(letter, maps, [yextents, xextents], [y,x], count)
+  end
+end
+
+def findLetter(letter, maps, [yextents, xextents], [y,x], count, _), do: scan(letter, maps, [yextents, xextents], [y,x], count)
 
 def find(maps, character, [yextents, xextents], [y,x], direction, count, characterAtPosition) when characterAtPosition == character and character == "M" do
   find(maps, "A", [yextents, xextents], coordinatesForDirection([y,x],direction), direction, count, indexMapAtPosition([y,x],direction,maps))
@@ -80,6 +96,17 @@ def find(_maps, _character, [_yextents,  xextents], [_y, x], _direction, count, 
 def find(_maps, _character, [_yextents, _xextents], [_y, x], _direction, count, _characterAtPosition) when x < 0, do: count
   @doc """
 
+  ["MMMSXXMASM",
+   "MSAMXMSMSA",
+   "AMXSXMAAMM",
+   "MSAMASMSMX",
+   "XMASAMXAMM",
+   "XXAMMXXAMA",
+   "SMSMSASXSS",
+   "SAXAMASAAA",
+   "MAMMMXMMMM",
+   "MXMXAXMASX"]
+
   Part 1
       iex> Day4.part1(["MMMSXXMASM", "MSAMXMSMSA", "AMXSXMAAMM", "MSAMASMSMX", "XMASAMXAMM", "XXAMMXXAMA", "SMSMSASXSS", "SAXAMASAAA", "MAMMMXMMMM", "MXMXAXMASX"])
       18
@@ -88,7 +115,30 @@ def part1(lines) do
   maps = lines |> parse()
   extents = calculateExtents(maps)
   #          Look for       Pos at 0,0
-  findx(maps, extents, [0,0], 0, maps[0][0])
+  findLetter("X", maps, extents, [0,0], 0, maps[0][0])
+end
+
+ @doc """
+
+  ["MMMSXXMASM", .M.S......
+   "MSAMXMSMSA", ..A..MSMS.
+   "AMXSXMAAMM", .M.S.MAA..
+   "MSAMASMSMX", ..A.ASMSM.
+   "XMASAMXAMM", .M.S.M....
+   "XXAMMXXAMA", ..........
+   "SMSMSASXSS", S.S.S.S.S.
+   "SAXAMASAAA", .A.A.A.A..
+   "MAMMMXMMMM", M.M.M.M.M.
+   "MXMXAXMASX"] ..........
+
+  Part 2
+      iex> Day4.part2(["MMMSXXMASM", "MSAMXMSMSA", "AMXSXMAAMM", "MSAMASMSMX", "XMASAMXAMM", "XXAMMXXAMA", "SMSMSASXSS", "SAXAMASAAA", "MAMMMXMMMM", "MXMXAXMASX"])
+      9
+  """
+def part2(lines) do
+  maps = lines |> parse()
+  extents = calculateExtents(maps)
+  findLetter("A", maps, extents, [0,0], 0, maps[0][0])
 end
 
   @doc """
@@ -101,5 +151,17 @@ end
     {:ok, contents} = File.read("day4.txt")
     String.split(contents, "\n", trim: true)
              |> part1()
+  end
+
+  @doc """
+  Solve2
+
+      iex> Day4.solve2()
+      1866
+  """
+  def solve2() do
+    {:ok, contents} = File.read("day4.txt")
+    String.split(contents, "\n", trim: true)
+             |> part2()
   end
 end
