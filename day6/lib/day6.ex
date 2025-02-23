@@ -61,28 +61,6 @@ defmodule Day6 do
   def findCharacter(character,  map, [ yextents,  xextents], [_y,x], _characterAtPosition)                                      , do: findCharacter(character, map, [yextents, xextents], [0  , x+1], map[ 0 ][x+1])
 
   @doc """
-  Calculate next step in direction -- -1 if next step would go out.
-
-  """
-  def oneStep([y , _], [ _,_ ], direction) when direction == :up and y < 0     , do: [ -1, -1]
-  def oneStep([y , x], [ _,_ ], direction) when direction == :up                , do: [y-1,  x]
-  def oneStep([_ , x], [ _,xt], direction) when direction == :right and x == xt-1 , do: [ -1, -1]
-  def oneStep([y , x], [ _,_ ], direction) when direction == :right             , do: [y  ,x+1]
-  def oneStep([y, _ ], [yt,_ ], direction) when direction == :down and y == yt-1  , do: [ -1, -1]
-  def oneStep([y , x], [ _,_ ], direction) when direction == :down              , do: [ y+1, x]
-  def oneStep([_ , x], [ _,_ ], direction) when direction == :left and x < 0   , do: [ -1, -1]
-  def oneStep([y , x], [ _,_ ], direction) when direction == :left              , do: [y , x-1]
-
-  def countAllX(_map, [_yt,xt], [_y,x], _character, count) when x == xt,          do: count
-  def countAllX(map, [yt,xt], [y,x], _character, count) when y == yt    ,          do: countAllX(map, [yt,xt], [0,x+1], map[0][x+1], count)
-  def countAllX(map, [yt,xt], [y,x], character, count) do
-    case character == "X" do
-      true  -> countAllX(map, [yt,xt], [y+1,x], map[y+1][x], count + 1)
-      false -> countAllX(map, [yt,xt], [y+1,x], map[y+1][x], count)
-    end
-  end
-
-  @doc """
   Turn rotates 90 degrees
 
       iex>Day6.turn(:left)
@@ -99,32 +77,150 @@ defmodule Day6 do
   def turn(direction) when direction == :down , do: :left
   def turn(direction) when direction == :left , do: :up
 
-  def mapAtOneStep([y,x], [yt,xt], direction, map) do
-    [ynext, xnext] = oneStep([y,x], [yt,xt], direction)
-    case [ynext, xnext] do
-      [-1,_] -> "."
-      _      -> map[ynext][xnext]
+  def characterFor(direction) when direction == :up, do: "^"
+  def characterFor(direction) when direction == :right, do: ">"
+  def characterFor(direction) when direction == :down, do: "v"
+  def characterFor(direction) when direction == :left, do: "<"
+
+  @doc """
+  Calculate next step in direction -- -1 if next step would go out.
+
+  """
+  def oneStep([y , x], [ _,_ ], direction) when direction == :up                , do: [y-1,  x]
+  def oneStep([y , x], [ _,_ ], direction) when direction == :right             , do: [y  ,x+1]
+  def oneStep([y , x], [ _,_ ], direction) when direction == :down              , do: [ y+1, x]
+  def oneStep([y , x], [ _,_ ], direction) when direction == :left              , do: [y , x-1]
+
+  def countAllX(_map, [_yt,xt], [_y,x], _character, count) when x == xt,          do: count
+  def countAllX(map, [yt,xt], [y,x], _character, count) when y == yt    ,          do: countAllX(map, [yt,xt], [0,x+1], map[0][x+1], count)
+  def countAllX(map, [yt,xt], [y,x], character, count) do
+    case character == "X" do
+      true  -> countAllX(map, [yt,xt], [y+1,x], map[y+1][x], count + 1)
+      false -> countAllX(map, [yt,xt], [y+1,x], map[y+1][x], count)
     end
   end
 
-  #              Y,X
-  # map = addToMap(0,0,"X",map)
+  def addToMap(y,x,char,map) do
+    case x in Map.keys(map) do
+      true -> Map.put(map, y, Map.put(map[y], x, char))
+      false -> Map.put(map, y, Map.put(%{}, x, char))
+    end
+  end
 
-    #moved off map (4 ways to move off -- represented by -1,-1)
+  def scanForObstaclePlacement(_map, [_yt,xt], [_y,x], _character, count, [_gy,_gx]) when x == xt, do: count
+  def scanForObstaclePlacement(map, [yt,xt], [y,x], _character, count, [gy,gx]) when y == yt, do: scanForObstaclePlacement(map, [yt,xt], [0,x+1], map[0][x+1], count,[gy,gx])
+  def scanForObstaclePlacement(map, [yt,xt], [y,x], character, count, [gy,gx]) when character == "^" or character == "#", do: scanForObstaclePlacement(map, [yt,xt], [y+1,x], map[y+1][x], count, [gy,gx])
+  def scanForObstaclePlacement(map, [yt,xt], [y,x], _character, count, [gy,gx]) do
+    #check if this path is a closed loop +1 count if so and increment y.
+    #make changes to map but don't return map.
+    #will be similar to patrol, but will be patrol for loop...
+    #TODO write out the obstacle to copied map
+    cyclemap = map
+    cyclemap = addToMap(y,x,"#",cyclemap)
+    #returns 1, if cycle, otherwise 0.
+    # "Welcome #{name}, your email is: #{email(username, domain)}"
+    IO.puts("Scanning for solution for obstacle :Y#{y}, :X#{x} count:#{count}")
+    count = count + patrolDetectCycle(cyclemap, [yt,xt], :up, [gy-1,gx], [gy,gx], characterFor(:up), cyclemap[gy][gx], [])
+    IO.puts("Scanning for solution for obstacle :Y#{y}, :X#{x} count:#{count}")
+    scanForObstaclePlacement(map, [yt,xt], [y+1,x], map[y+1][x], count ,[gy,gx])
+  end
+
+# iex(1)> list = []
+# []
+# iex(2)> list = [[1,2] | list]
+# [[1, 2]]
+# iex(3)> list = [[2,3] | list]
+# [[2, 3], [1, 2]]
+# iex(4)> [2,3] in list
+# true
+# iex(5)> [422,3] in list
+# false
+# iex(6)>
+
+
+  #moved off map (4 ways to move off)
+  def patrolDetectCycle(_cyclemap, [yt,_xt], _direction, [y,_x], [_gy,_gx], _characterFor, _characterAt, _movesList) when y == yt, do: 0
+  def patrolDetectCycle(_cyclemap, [_yt,_xt], _direction, [y,_x], [_gy,_gx], _characterFor, _characterAt, _movesList) when y == -1, do: 0
+  def patrolDetectCycle(_cyclemap, [_yt,xt], _direction, [_y,x], [_gy,_gx], _characterFor, _characterAt, _movesList) when x == xt, do: 0
+  def patrolDetectCycle(_cyclemap, [_yt,_xt], _direction, [_y,x], [_gy,_gx], _characterFor, _characterAt, _movesList) when x == -1, do: 0
+  #if same symbol, but also not the start position.
+  # def patrolDetectCycle(_cyclemap, [_yt,_xt], _direction, [y,x], [gy,gx], characterFor, characterAt) when characterFor == characterAt, do: 1
+  # def patrolDetectCycle(cyclemap,  [yt,xt]  , direction , [y,x], [gy,gx], characterFor, characterAt, movesList) when [y,x] in movesList, do: 1
+  def patrolDetectCycle(cyclemap,  [yt,xt]  , direction , [y,x], [gy,gx], characterFor, characterAt, movesList) do
+    # IMPORTANT -- map doesn't matter.... can probably swap to normal map. If I can have it check for dynamic obstacle.
+
+    # IMPORTANT -- Need to record the position, and direction we were going when we hit a bumper, once a bumper comes up again, with same direction.
+    case [y,x, direction] in movesList do
+      true -> 1
+      false ->
+      # IO.puts("List: #{movesList}")
+      # How do i detect the solution of one, and add 1?
+      # case [y == gy, x == gx, characterAt == characterFor] do
+        # [_, _, false] ->
+      # cyclemap = addToMap(y,x,characterFor(direction), cyclemap)
+      #hit obstacle (turn and move) -- otherwise move
+      #once we turn, we need to check the other direction.
+      #TODO: if infinite(or wrong answer) -- need to track where we have gone, and not care about characters.
+      case mapAtOneStep([y,x], [yt,xt], direction, cyclemap) do
+        "#" -> #At least one turn
+             #record bumper position and direction....
+             movesList = [[y,x, direction] | movesList]
+             IO.puts("Adding: [#{y},#{x}]")
+             direction = turn(direction)
+            #  IO.puts("Direction")
+            #  IO.puts(direction)
+            #  IO.puts("Y:")
+            #  IO.puts(y)
+            #  IO.puts("X:")
+            #  IO.puts(x)
+            #  IO.puts("GY")
+            #  IO.puts(gy)
+            #  IO.puts("GX")
+            #  IO.puts(gx)
+             case mapAtOneStep([y,x], [yt,xt], direction, cyclemap) do
+                "#" -> #Second turn
+                      direction = turn(direction)
+                      case mapAtOneStep([y,x], [yt,xt], direction, cyclemap) do
+                        "#" -> #Third turn
+                                direction = turn(direction)
+                                case mapAtOneStep([y,x], [yt,xt], direction, cyclemap) do
+                                  "#" -> 0 #Fourth turn
+                                  _ -> patrolDetectCycle(cyclemap, [yt,xt], direction, oneStep([y,x],[yt,xt], direction ), [gy,gx], characterFor( direction ), cyclemap[y][x], movesList)
+                                end
+                        _ ->  patrolDetectCycle(cyclemap, [yt,xt], direction, oneStep([y,x],[yt,xt], direction ), [gy,gx], characterFor( direction ), cyclemap[y][x], movesList)
+                      end
+                _ ->  patrolDetectCycle(cyclemap, [yt,xt], direction, oneStep([y,x],[yt,xt], direction ), [gy,gx], characterFor( direction ), cyclemap[y][x], movesList)
+             end
+        _ ->  patrolDetectCycle(cyclemap, [yt,xt], direction, oneStep([y,x],[yt,xt], direction ), [gy,gx], characterFor( direction ), cyclemap[y][x], movesList)
+
+        # "#" -> patrolDetectCycle(cyclemap, [yt,xt], turn(direction), oneStep([y,x],[yt,xt], turn(direction)), [gy,gx], characterFor(turn(direction)), cyclemap[y][x])
+        # _  ->  patrolDetectCycle(cyclemap, [yt,xt],      direction,  oneStep([y,x],[yt,xt],      direction ), [gy,gx], characterFor(     direction ), cyclemap[y][x])
+        end
+      # [false, false, true] -> 0
+      # [false, true, true] -> 0
+      # end
+    end
+  end
+
   def patrol(map, [_yextents, _xextents], _direction, [y,_x]) when y == -1, do: map
+  def patrol(map, [yextents, _xextents], _direction, [y,_x]) when y == yextents, do: map
+  def patrol(map, [_yextents, _xextents], _direction, [_y,x]) when x == -1, do: map
+  def patrol(map, [_yextents, xextents], _direction, [_y,x]) when x == xextents, do: map
+
   def patrol(map, [yextents, xextents], direction, [y,x]) do
     map = addToMap(y,x,"X",map)
-    #hit obstactle (turn and move) -- otherwise move
+    #hit obstacle (turn and move) -- otherwise move
     case mapAtOneStep([y,x], [yextents,xextents], direction, map) do
       "#" -> patrol(map, [yextents, xextents], turn(direction), oneStep([y,x],[yextents,xextents], turn(direction)))
       _  -> patrol(map, [yextents, xextents], direction, oneStep([y,x], [yextents,xextents], direction))
     end
   end
 
-  def addToMap(x,y,char,map) do
-    case x in Map.keys(map) do
-      true -> Map.put(map, x, Map.put(map[x], y, char))
-      false -> Map.put(map, x, Map.put(%{}, y, char))
+  def mapAtOneStep([y,x], [yt,xt], direction, map) do
+    [ynext, xnext] = oneStep([y,x], [yt,xt], direction)
+    case [ynext, xnext] do
+      [-1,_] -> "."
+      _      -> map[ynext][xnext]
     end
   end
 
@@ -147,13 +243,43 @@ defmodule Day6 do
     addToMap(y,x,"X",map) |> patrol(extents, :up, [y,x])
                           |> countAllX(extents, [0,0], map[0][0], 0)
   end
+
   @doc """
   Solve 1
       iex>Day6.solve1()
-      :solve
+      4964
   """
   def solve1() do
     {:ok, contents} = File.read("day6.txt")
     contents |> part1()
   end
+  @doc """
+  Part 2
+    iex> {:ok, contents} = File.read("sample.txt")
+    iex> contents |> Day6.part2()
+    6
+  """
+  def part2(contents) do
+    map = contents |> parse()
+    extents = calculateExtents(map)
+    IO.puts("130 by 130")
+    [y,x] = findCharacter("^", map, extents, [0,0], map[0][0])
+    #TODO: scan where to place obstacle....(can't be ^, or #)
+    #TODO: patrol but I need to detect when i start repeating the same direction
+    #TODO: maybe write ^><v as directions moved. If it picks up that I've been there before
+    #TODO: then count that one as a obstacle path.
+    #TODO: if it exits the map, then it is not a repeatable one.
+    scanForObstaclePlacement(map, extents, [0,0], map[0][0], 0, [y,x])
+  end
+  @doc """
+  Solve 2
+      iex>Day6.solve2()
+      1740
+  """
+  def solve2() do
+    {:ok, contents} = File.read("day6.txt")
+    contents
+      |> part2()
+  end
+
 end

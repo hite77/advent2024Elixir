@@ -17,6 +17,7 @@ mix test
 Doc testing even for solutions, and intermediate methods.
 
 Map is used on day 4, plus might want to solve the eight way through finding X's and going each of the 8 ways to count them.
+ALso day 6 has a floor layout / maze kinda.
 
 Day 3 want to work out the solution of do() don't() so that I didn't have to write out an intermediate version, and also manually edit part of it out.
 
