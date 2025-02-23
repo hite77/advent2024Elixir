@@ -88,3 +88,13 @@ By predicting the guard's route, you can determine which specific positions in t
 In this example, the guard will visit 41 distinct positions on your map.
 
 Predict the path of the guard. How many distinct positions will the guard visit before leaving the mapped area?
+
+doctest Day6.solve/0 (6) (42623.9ms) [L#3]
+improved to.... (less than 8 seconds)
+Day6Test [test/day6_test.exs]
+  * doctest Day6.solve/0 (6) (7720.6ms) [L#3]
+  * doctest Day6.parts/1 (5) (1.9ms) [L#3]
+  * doctest Day6.calculateExtents/1 (2) (0.00ms) [L#3]
+  * doctest Day6.parse/1 (1) (1.2ms) [L#3]
+  * doctest Day6.findCharacter/5 (3) (1.3ms) [L#3]
+  * doctest Day6.turn/1 (4) (0.00ms) [L#3]

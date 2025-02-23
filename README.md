@@ -4,6 +4,21 @@ Working through examples using elixir.
 mix new <name>
 mix test
 
+The following has no timeout, also indicates the time and name of each test.
+mix test --trace
+
+iex(1)> list = []
+[]
+iex(2)> list = [[1,2] | list]
+[[1, 2]]
+iex(3)> list = [[2,3] | list]
+[[2, 3], [1, 2]]
+iex(4)> [2,3] in list
+true
+iex(5)> [422,3] in list
+false
+iex(6)>
+
 @doc """
   Hello world.
 
