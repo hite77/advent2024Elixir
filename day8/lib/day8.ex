@@ -103,33 +103,59 @@ defmodule Day8 do
   #     [".", ".", ".", ".", ".", ".", ".", ".", ".", ".", "#", "."], #10
   #     [".", ".", ".", ".", ".", ".", ".", ".", ".", ".", ".", "."]] #11
   """
-  def colin([[], [_, _]], colinPoints), do: colinPoints
-  def colin([[head | tail], [y,x]], colinPoints), do: colin([tail, [y,x]], colinLetter(head,head,[y,x],colinPoints))
-  def colinLetter([head1 | tail1], list, [y,x], colinPoints), do:  colinItems(tail1, list, [y,x], colinItems(head1 , list, [y,x], colinPoints))
-  def colinItems([_, _, _], [], _, colinPoints), do: colinPoints
-  def colinItems([[letter, yi, xi] | tailItems], [head | tail], [y,x], colinPoints) do
+  def colin([[], [_, _]], colinPoints,_), do: colinPoints
+  def colin([[head | tail], [y,x]], colinPoints, part), do: colin([tail, [y,x]], colinLetter(head,head,[y,x],colinPoints, part), part)
+  def colinLetter([head1 | tail1], list, [y,x], colinPoints, part), do:  colinItems(tail1, list, [y,x], colinItems(head1 , list, [y,x], colinPoints, part), part)
+  def colinItems([_, _, _], [], _, colinPoints, _), do: colinPoints
+  def colinItems([[letter, yi, xi] | tailItems], [head | tail], [y,x], colinPoints, part) do
     [_,yh,xh] = head
-    colinItems(tailItems, [head | tail], [y,x],  colinItems([letter, yi, xi], tail, [y,x], build_colin(colinPoints, [y,x],[yi,xi],[yh,xh])))
+    colinItems(tailItems, [head | tail], [y,x],  colinItems([letter, yi, xi], tail, [y,x], build_colin(colinPoints, [y,x],[yi,xi],[yh,xh], part), part), part)
   end
-  def colinItems([], _, _, colinPoints), do: colinPoints
-  def colinItems(item, [head | tail], [y,x], colinPoints) do
+  def colinItems([], _, _, colinPoints, _), do: colinPoints
+  def colinItems(item, [head | tail], [y,x], colinPoints, part) do
     [_, yi, xi] = item
     [_,yh,xh] = head
-    colinItems(item, tail, [y,x], build_colin(colinPoints, [y,x], [yi,xi],[yh,xh]))
+    colinItems(item, tail, [y,x], build_colin(colinPoints, [y,x], [yi,xi],[yh,xh], part), part)
   end
 
-  def build_colin(colinPoints, [yt,xt],[y1,x1],[y2,x2]) do
+  # this is part 1   for part 2 (equal coordinates each tower will also be an add_once.)
+  # And need to multiply the y,x offsets and keep adding until no more can be added.
+  def build_colin(colinPoints, [yt,xt],[y1,x1],[y2,x2], part) do
+    case part do
+      :part1 ->
+        case y1 == y2 and x1 == x2 do
+          true -> colinPoints
+          false -> first = [y1+(y1-y2)  ,x1+(x1-x2)]
+                  second = [y2+(y2-y1) ,x2+(x2-x1)]
+                  case [in_range([yt,xt], first), in_range([yt,xt], second)] do
+                    [true, true]   -> add_once(add_once(colinPoints, first), second)
+                    [true, false]  -> add_once(colinPoints, first)
+                    [false, true]  -> add_once(colinPoints, second)
+                    [false, false] -> colinPoints
+                  end
+          end
+      :part2 -> colinPoints = add_once(add_once(colinPoints, [y1,x1]), [y2,x2])
+                add_multiples(colinPoints, 1, [yt,xt],[y1,x1],[y2,x2])
+    end
+
+  end
+
+  def add_multiples(colinPoints, multiplier, [yt,xt],[y1,x1],[y2,x2]) do
     case y1 == y2 and x1 == x2 do
       true -> colinPoints
-      false -> first = [y1+(y1-y2)  ,x1+(x1-x2)]
-               second = [y2+(y2-y1) ,x2+(x2-x1)]
-               case [in_range([yt,xt], first), in_range([yt,xt], second)] do
-                [true, true]   -> add_once(add_once(colinPoints, first), second)
-                [true, false]  -> add_once(colinPoints, first)
-                [false, true]  -> add_once(colinPoints, second)
+      false -> first = [y1+(y1-y2)*multiplier, x1+(x1-x2)*multiplier]
+              second = [y2+(y2-y1)*multiplier ,x2+(x2-x1)*multiplier]
+              case [in_range([yt,xt], first), in_range([yt,xt], second)] do
+                [true, true]   -> colinPoints = add_once(add_once(colinPoints, first), second)
+                                  add_multiples(colinPoints, multiplier+1, [yt,xt],[y1,x1],[y2,x2])
+                [true, false]  -> colinPoints = add_once(colinPoints, first)
+                                  add_multiples(colinPoints, multiplier+1, [yt,xt],[y1,x1],[y2,x2])
+                [false, true]  -> colinPoints = add_once(colinPoints, second)
+                                  add_multiples(colinPoints, multiplier+1, [yt,xt],[y1,x1],[y2,x2])
                 [false, false] -> colinPoints
-               end
+              end
     end
+
   end
 
   def in_range([yt,xt], [y,x]) when y >= 0 and y<= yt and x>= 0 and x<= xt, do: true
@@ -146,20 +172,28 @@ defmodule Day8 do
   Should be able to parse get the coords rows, and then calculate the Coliniearity
 
       iex> {:ok, content} = File.read("sample.txt")
-      iex> Day8.parts(content)
+      iex> Day8.parts(content, :part1)
       14
 
+      iex> {:ok, content} = File.read("sample.txt")
+      iex> Day8.parts(content, :part2)
+      34
+
       iex> {:ok, content} = File.read("day8.txt")
-      iex> Day8.parts(content)
+      iex> Day8.parts(content, :part1)
       367
 
+      iex> {:ok, content} = File.read("day8.txt")
+      iex> Day8.parts(content, :part2)
+      :part2
+
   """
-  def parts(content) do
+  def parts(content, part) do
     content
       |> parse()
       |> coordsrows([], [0,0],0)
       |> groupLetters([], [], "", [])
-      |> colin([])
+      |> colin([], part)
       |> Enum.count()
   end
 
