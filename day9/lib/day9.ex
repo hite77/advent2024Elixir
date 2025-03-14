@@ -135,6 +135,161 @@ defmodule Day9 do
   end
 
   @doc """
+  Move by clocks.
+
+  # Start with right most number --> 9 in this case
+  # find start to end of moving block all should be 9
+  # Looking for 2 blocks free from the left....
+  # stop looking for moving the number if nothing is found big enough (-1's)
+  # replace start to end (9) with -1
+  # replace start to end of left replace with 9....
+  # call move2 with next lower ID -- find it's start and end (length) -- find if space available and move.
+
+  00...111...2...333.44.5555.6666.777.888899
+  0099.111...2...333.44.5555.6666.777.8888..
+  0099.1117772...333.44.5555.6666.....8888..
+  0099.111777244.333....5555.6666.....8888..
+  00992111777.44.333....5555.6666.....8888..
+    iex>{:ok, content} = File.read("example.txt")
+    iex>content |> Day9.parse() |> Day9.move2()
+    %{0 => 0, 1 => 0, 2 => 9, 3 => 9, 4 => 2, 5 => 1, 6 => 1, 7 => 1, 8 => 7, 9 => 7, 10 => 7, 11 => -1, 12 => 4, 13 => 4, 14 => -1, 15 => 3, 16 => 3, 17 => 3, 18 => -1, 19 => -1, 20 => -1, 21 => -1, 22 => 5, 23 => 5, 24 => 5, 25 => 5, 26 => -1, 27 => 6, 28 => 6, 29 => 6, 30 => 6, 31 => -1, 32 => -1, 33 => -1, 34 => -1, 35 => -1, 36 => 8, 37 => 8, 38 => 8, 39 => 8, 40 => -1, 41 => -1}
+  """
+  def copy(map, id, startId, endId, startEmpty, endEmpty) do
+    case startId > endId do
+      true -> map
+      false -> map = Map.put(map, startId, -1)
+               map = Map.put(map, startEmpty, id)
+               copy(map, id, startId + 1, endId, startEmpty + 1, endEmpty)
+    end
+  end
+  def move2([], map), do: map
+  def move2([head | tail], map) do
+    [id, startId, endId, length] = head
+    IO.puts("Current Id: #{id} startId: #{startId} endId: #{endId} length: #{length}")
+    [startEmpty, endEmpty, found] = findSpaceForNumber(map, length, startId, 0, -1)
+    case found do
+      false -> move2(tail, map)
+      true -> move2(tail, copy(map, id, startId, endId, startEmpty, endEmpty))
+    end
+  end
+  def move2(map), do: move2(group(map), map)
+
+  #0, 0, -1, -1, -1, 1, 1,
+  # ASK FOR LENGTH 4
+  @doc """
+  Find space for number
+        iex>map = %{0 => 0, 1 => -1, 2 => -1, 3 => 1, 4 => -1, 5 => -1, 6 => -1}
+        iex>Day9.findSpaceForNumber(map, 1, 6, 0, -1)
+        [1,1, true]
+        iex>Day9.findSpaceForNumber(map, 2, 6, 0, -1)
+        [1,2, true]
+        iex>Day9.findSpaceForNumber(map, 3, 7, 0, -1)
+        [4,6, true]
+        iex>Day9.findSpaceForNumber(map, 3, 5, 0, -1)
+        [0,0, false]
+  """
+  # Call map, length 1, 6 end search, 0 current position, currentlengthSpace = -1
+  # case [false, 0, true, false]
+  # call map, 1, 6, 1, -1
+  # case [false, -1, true, false]
+  def findSpaceForNumber(map, length, endOfSearchPosition, currentPosition, currentlengthSpace) do
+    case [currentPosition >= endOfSearchPosition, Map.get(map, currentPosition), currentlengthSpace == -1, currentlengthSpace == length] do
+      [_, _, _, true] -> [currentPosition - length + 1,  currentPosition, true]
+      [true, _, _, _] -> [0,0,false]
+      [false, -1, true, _] -> case length == 1 do
+                              false -> findSpaceForNumber(map, length, endOfSearchPosition, currentPosition + 1, 1)
+                              true -> [currentPosition, currentPosition, true]
+                              end
+      [false, -1, false, _] -> case length == currentlengthSpace + 1 do
+                               false -> findSpaceForNumber(map, length, endOfSearchPosition, currentPosition + 1, currentlengthSpace + 1)
+                               true -> [currentPosition - length + 1,  currentPosition, true]
+                               end
+
+      [_, _, _, _] -> findSpaceForNumber(map, length, endOfSearchPosition, currentPosition + 1, -1)
+    end
+  end
+
+  @doc """
+        iex>Day9.group(%{0 => 0, 1 => 0, 2 => -1, 3 => 1, 4 => 2, 5 => 2, 6 => 2})
+        [[2, 4, 6, 3], [1, 3, 3, 1], [0, 0, 1, 2]]
+
+        iex>Day9.group(%{0 => -1, 1 => 0, 2 => 0, 3 => -1, 4 => 1, 5 => 2, 6 => 2, 7 => 2})
+        [[2, 5, 7, 3], [1, 4, 4, 1], [0, 1, 2, 2]]
+
+        iex>Day9.group(%{
+        ...>      0 => 0, #[0,0,1,2]
+        ...>      1 => 0,
+        ...>      2 => -1,
+        ...>      3 => -1,
+        ...>      4 => -1,
+        ...>      5 => 1, #[1, 5, 7, 3]
+        ...>      6 => 1,
+        ...>      7 => 1,
+        ...>      8 => -1,
+        ...>      9 => -1,
+        ...>      10 => -1,
+        ...>      11 => 2, #[2, 11, 11, 1]
+        ...>      12 => -1,
+        ...>      13 => -1,
+        ...>      14 => -1,
+        ...>      15 => 3, #[3, 15, 17, 3]
+        ...>      16 => 3,
+        ...>      17 => 3,
+        ...>      18 => -1,
+        ...>      19 => 4, #[4, 19, 20, 2]
+        ...>      20 => 4,
+        ...>      21 => -1,
+        ...>      22 => 5, #[5, 22, 25, 4]
+        ...>      23 => 5,
+        ...>      24 => 5,
+        ...>      25 => 5,
+        ...>      26 => -1,
+        ...>      27 => 6, #[6, 27, 30, 4]
+        ...>      28 => 6,
+        ...>      29 => 6,
+        ...>      30 => 6,
+        ...>      31 => -1,
+        ...>      32 => 7, #[7, 32, 34, 3]
+        ...>      33 => 7,
+        ...>      34 => 7,
+        ...>      35 => -1,
+        ...>      36 => 8, #[8, 36, 39, 4]
+        ...>      37 => 8,
+        ...>      38 => 8,
+        ...>      39 => 8,
+        ...>      40 => 9, #[9, 40, 41, 2]
+        ...>      41 => 9
+        ...>    })
+        [[9, 40, 41, 2], [8, 36, 39, 4], [7, 32, 34, 3], [6, 27, 30, 4], [5, 22, 25, 4], [4, 19, 20, 2], [3, 15, 17, 3], [2, 11, 11, 1], [1, 5, 7, 3], [0, 0, 1, 2]]
+  """
+  # return [[ID, start, end, length], next
+  def group(map, position, currentId, start, endCode, groupings) do
+    currentPos = Map.get(map, position)
+    case [currentPos, currentId == -1, start == -1, currentPos == currentId] do
+      [nil, false, false, _]  -> [[currentId, start, endCode, endCode - start + 1] | groupings]
+      [-1,  true, true, true] -> group(map, position + 1, currentId, start, endCode, groupings)
+      [-1,  false, false, false] -> group(map, position + 1, -1, -1, -1, [[currentId, start, endCode, endCode - start + 1] | groupings])
+      #currentId = -1, it is an integer
+      [_, true, true, false] -> start = position
+                                endCode = position
+                                group(map, position + 1, currentPos, start, endCode, groupings)
+      # Has Id, Start set , continue
+      [_, false, false, true] -> endCode = position
+                                 group(map, position + 1, currentId, start, endCode, groupings)
+      #  Has ID, start, not matching
+      [_, false, false, false] -> groupings = [[currentId, start, endCode, endCode - start + 1] | groupings]
+                                  group(map, position + 1, currentPos, position, position, groupings)
+    end
+  end
+  def group(map), do: group(map, 0, -1, -1, -1, [])
+
+  # TODO: try this idea, and refactor Find Number to be simpler, or just send it in to move and traverse it.
+  # Might want to create a list of tuples with ID and start, end and length and build it so that head is highest id.
+  # I can traverse this with Find Number or might just be popping the head off and keep working through till it is empty.
+
+  # Probably don't do this part.... Might want to create another list of spaces?  Except each move would invalidate it --
+
+  @doc """
   Calculate checksum:
   position 0 is left most timed ID....
   skip free space (.)
@@ -172,9 +327,6 @@ defmodule Day9 do
         ...>      35 => -1})
         1928
   """
-  # def checksum([], _, sum), do: sum
-  #def checksum([head | _tail], _index, sum) when head == -1, do: sum
-  #def checksum([head | tail], index, sum), do: checksum(tail, index + 1, sum + index * head)
   def checksum(map, index, sum) do
     case Enum.max(Map.keys(map)) > index do
       true -> value =  Map.get(map, index)
@@ -191,8 +343,24 @@ defmodule Day9 do
   end
   def checksum(map) do
     checksum(map, 0, 0)
-    #Map.values(map)
-    #  |> checksum(0,0)
+  end
+
+  def checksum2(map, index, sum) do
+    IO.puts("index: #{index}")
+    case Enum.max(Map.keys(map)) >= index do
+      true -> value =  Map.get(map, index)
+                case [value != -1, value == nil] do
+                    [true, false] -> checksum2(map, index + 1, sum + index * value)
+                    [false, false] ->  checksum2(map, index + 1, sum)
+                    [true, true]  ->   IO.puts("nil at index: #{index}")
+                                       sum
+                end
+      false ->  IO.puts("Went past index")
+                sum
+    end
+  end
+  def checksum2(map) do
+    checksum2(map, 0, 0)
   end
 
   @doc """
@@ -201,9 +369,10 @@ defmodule Day9 do
       iex>Day9.parts(content)
       1928
 
-      iex>{:ok, content} = File.read("day9.txt")
-      iex>Day9.parts(content)
-      6341711060162
+      #iex>{:ok, content} = File.read("day9.txt")
+      #iex>Day9.parts(content)
+      #6341711060162
+
       #8832372695439 too high. (113.5 seconds to get this result.)
       #8832372695439 still too high.
       #6341711060162 in 191.9 seconds -- 3.2 minutes.
@@ -218,5 +387,19 @@ defmodule Day9 do
       |> parse()
       |> move()
       |> checksum()
+  end
+@doc """
+      iex>{:ok, content} = File.read("example.txt")
+      iex>Day9.part2(content)
+      2858
+      iex>{:ok, content} = File.read("day9.txt")
+      iex>Day9.part2(content)
+      6377400869326
+"""
+  def part2(input) do
+    input
+      |> parse()
+      |> move2()
+      |> checksum2()
   end
 end
